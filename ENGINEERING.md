@@ -71,6 +71,14 @@ The frontend is split into:
 
 All data is fetched in the browser, for two reasons. There is one API URL to configure. And the API sees real client IPs, which per-IP rate limiting needs.
 
+### SOLID, mapped to the code
+
+- **S (single responsibility):** one job per layer. Routes in `api/v1/issues.py` only translate HTTP, `services/issue_service.py` holds the rules, `repositories/issue_repository.py` holds the SQL, `db/unit_of_work.py` owns the transaction.
+- **O (open/closed):** new behaviour is added, not edited in. A filter is one more function in `FILTER_BUILDERS` (`repositories/issue_repository.py`). A domain error is one more `AppError` subclass (`core/exceptions.py`). The workflow is the `STATUS_TRANSITIONS` table (`core/constants.py`).
+- **L (Liskov substitution):** the in-memory fakes in `tests/fakes.py` stand in for the SQLAlchemy classes behind the same Protocols. `IssueService` runs unchanged on either: the unit tests use the fakes, the integration tests use the real classes.
+- **I (interface segregation):** the service needs only `UserLookup.exists()`, while the users endpoint uses the wider `UserDirectory` (`repositories/interfaces.py`).
+- **D (dependency inversion):** `IssueService` depends on Protocols (`IssueRepository`, `UserLookup`, `UnitOfWork`, `Clock`). The concrete classes are wired only in `api/deps.py`.
+
 ### Design decisions worth calling out
 
 - **Optimistic locking: a version in the body plus `409`, rather than `ETag`/`If-Match` plus `412`.**
@@ -84,7 +92,7 @@ All data is fetched in the browser, for two reasons. There is one API URL to con
 - **My own small rate limiter on top of the `limits` library, instead of slowapi.**
   - slowapi's decorators bind to a module-global `Limiter`. That makes per-app settings and test isolation awkward.
   - Its header injection needs an extra `response` parameter on every route.
-  - Its storage fallback has edge cases where a Redis error during header injection is re-raised.
+  - Its storage fallback doesn't protect header injection. If Redis fails after the hit but while slowapi reads the window stats for the headers, it switches to memory and then re-raises the error anyway, so the request fails with a 500 (slowapi 0.1.10, unless `swallow_errors` is set). I reproduced this with a storage stub that fails only on `get_window_stats`.
   - About 100 lines of my own code give injectable, testable behaviour: Redis sliding-window counters, fallback to memory on connection errors, and a recovery check every 30 s with short socket timeouts.
 - **Readiness ignores Redis.** If Redis failed readiness, a Redis outage would pull every healthy API instance out of rotation, even though the limiter can work without it. `/ready` reports it as `degraded` and still returns 200.
 - **The client IP is resolved in one place.** Uvicorn's `--proxy-headers --forwarded-allow-ips=$TRUSTED_PROXIES` rewrites the client address only for trusted proxies. The limiter reads `request.client.host` and never parses `X-Forwarded-For` itself, which could be spoofed.

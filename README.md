@@ -82,12 +82,13 @@ On first start the API container applies the database migrations and seeds four 
 Other useful targets (`make help` lists them all):
 
 ```bash
-make logs       # follow logs
-make down       # stop (keeps data)
-make test       # backend tests in the dev image
-make lint       # ruff + mypy
-make gen-api    # regenerate openapi.json and the frontend's TypeScript types
-make test-web   # frontend lint, type-check, unit tests and build (needs Node 24 locally)
+make logs             # follow logs
+make down             # stop (keeps data)
+make test             # backend tests in the dev image
+make lint             # ruff + mypy
+make gen-api          # regenerate openapi.json and the frontend's TypeScript types
+make test-web         # frontend lint, type-check, unit tests and build (needs Node 24 locally)
+make test-web-docker  # the same frontend checks inside Docker, no local Node needed
 ```
 
 [api.http](api.http) has ready-made requests for every endpoint and error case. It works with VS Code's REST Client or the JetBrains HTTP client.
@@ -144,8 +145,9 @@ All variables are optional. The defaults in `docker-compose.yml` and `backend/ap
 ## Tests
 
 ```bash
-make test        # backend tests, inside Docker (needs the db service)
-make test-web    # frontend: lint, type-check, Vitest unit tests, production build
+make test             # backend tests, inside Docker (needs the db service)
+make test-web         # frontend: lint, type-check, Vitest unit tests, production build
+make test-web-docker  # the same, inside Docker (no local Node needed)
 ```
 
 Or run the backend tests locally from `backend/`, with the venv active and `docker compose up -d db` running:
@@ -200,7 +202,7 @@ Each issue in a response includes:
 `sort` takes one of `created_at`, `updated_at`, `priority` or `title`. Prefix it with `-` for descending order. The default is `-created_at`. The issue id is always used as a tiebreaker, so pages never repeat or skip rows.
 
 **PATCH rules:**
-- `version` is required. It must be the version you last read.
+- `version` is required. It must be the version you last read (`GET /issues/{id}` returns it). Leaving it out returns `422`.
 - `title`, `status` or `priority` set to `null` → `422`
 - `description: null` → stored as an empty string
 - `assignee_id: null` → unassigns the issue
