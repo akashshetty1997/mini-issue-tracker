@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 
+from app.api import health
+from app.api.error_handlers import register_exception_handlers
 from app.core.config import Settings, get_settings
 from app.core.constants import APP_TITLE, APP_VERSION
 from app.core.logging import configure_logging
+from app.middleware import register_middleware
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -13,8 +16,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title=APP_TITLE, version=APP_VERSION)
     app.state.settings = settings
 
-    @app.get("/health", tags=["health"])
-    def health() -> dict[str, str]:
-        return {"status": "ok"}
+    register_exception_handlers(app)
+    register_middleware(app, settings)
+    app.include_router(health.router)
 
     return app
