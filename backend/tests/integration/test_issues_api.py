@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_issue_service
 from app.core.clock import SystemClock
+from app.core.constants import MISSING_FIELD_MESSAGES
 from app.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.models import User
 from app.repositories.issue_repository import SqlAlchemyIssueRepository
@@ -234,7 +235,9 @@ class TestOptimisticLocking:
         response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"title": "x"})
 
         assert response.status_code == 422
-        assert response.json()["error"]["details"][0]["field"] == "version"
+        detail = response.json()["error"]["details"][0]
+        assert detail["field"] == "version"
+        assert detail["message"] == MISSING_FIELD_MESSAGES["version"]
 
     def test_delete_does_not_require_a_version(
         self, client: TestClient, create_issue: CreateIssue

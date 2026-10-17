@@ -52,6 +52,14 @@ Content-Type: application/json
   "version": 1
 }
 
+### No version -> 422, telling you to GET the issue for its current version
+PATCH {{api}}/issues/1
+Content-Type: application/json
+
+{
+  "status": "resolved"
+}
+
 ### Unassign
 PATCH {{api}}/issues/1
 Content-Type: application/json

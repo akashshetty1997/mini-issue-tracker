@@ -17,7 +17,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
 from app.api.error_responses import error_response
-from app.core.constants import ErrorCode
+from app.core.constants import MISSING_FIELD_MESSAGES, ErrorCode
 from app.core.exceptions import AppError
 
 logger = logging.getLogger(__name__)
@@ -40,14 +40,11 @@ def _format_validation_errors(exc: RequestValidationError) -> list[dict[str, Any
     details = []
     for error in exc.errors():
         location, *path = error["loc"]
+        field = ".".join(str(part) for part in path) or None
         message = str(error["msg"]).removeprefix(_PYDANTIC_MESSAGE_PREFIX)
-        details.append(
-            {
-                "location": location,
-                "field": ".".join(str(part) for part in path) or None,
-                "message": message,
-            }
-        )
+        if error["type"] == "missing" and location == "body" and field is not None:
+            message = MISSING_FIELD_MESSAGES.get(field, message)
+        details.append({"location": location, "field": field, "message": message})
     return details
 
 

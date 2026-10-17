@@ -17,8 +17,19 @@ IssueId = Annotated[int, Path(gt=0, le=MAX_DB_INT, description="Issue id")]
 NOT_FOUND: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorResponse, "description": "Issue not found"}
 }
+INVALID_ASSIGNEE: dict[int | str, dict[str, Any]] = {
+    422: {
+        "model": ErrorResponse,
+        "description": "Validation error (VALIDATION_ERROR), or the assignee does not exist "
+        "(INVALID_ASSIGNEE)",
+    }
+}
 CONFLICT: dict[int | str, dict[str, Any]] = {
-    409: {"model": ErrorResponse, "description": "Invalid status transition"}
+    409: {
+        "model": ErrorResponse,
+        "description": "Invalid status transition (INVALID_STATUS_TRANSITION), or the issue "
+        "was changed since the given version (VERSION_CONFLICT)",
+    }
 }
 
 
@@ -35,7 +46,13 @@ def list_issues(
     )
 
 
-@router.post("", status_code=201, summary="Create an issue", dependencies=[WriteRateLimit])
+@router.post(
+    "",
+    status_code=201,
+    summary="Create an issue",
+    responses=INVALID_ASSIGNEE,
+    dependencies=[WriteRateLimit],
+)
 def create_issue(
     data: IssueCreate, service: IssueServiceDep, request: Request, response: Response
 ) -> IssueRead:
@@ -58,7 +75,7 @@ def get_issue(issue_id: IssueId, service: IssueServiceDep) -> IssueRead:
 @router.patch(
     "/{issue_id}",
     summary="Update an issue (partial)",
-    responses={**NOT_FOUND, **CONFLICT},
+    responses={**NOT_FOUND, **CONFLICT, **INVALID_ASSIGNEE},
     dependencies=[WriteRateLimit],
 )
 def update_issue(issue_id: IssueId, data: IssueUpdate, service: IssueServiceDep) -> IssueRead:

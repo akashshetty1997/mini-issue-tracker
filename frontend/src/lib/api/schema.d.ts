@@ -384,7 +384,7 @@ export interface operations {
                     "application/json": components["schemas"]["IssueRead"];
                 };
             };
-            /** @description Validation error */
+            /** @description Validation error (VALIDATION_ERROR), or the assignee does not exist (INVALID_ASSIGNEE) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -563,7 +563,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Invalid status transition */
+            /** @description Invalid status transition (INVALID_STATUS_TRANSITION), or the issue was changed since the given version (VERSION_CONFLICT) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -572,7 +572,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Validation error */
+            /** @description Validation error (VALIDATION_ERROR), or the assignee does not exist (INVALID_ASSIGNEE) */
             422: {
                 headers: {
                     [name: string]: unknown;

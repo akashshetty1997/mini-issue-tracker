@@ -670,7 +670,7 @@
                 }
               }
             },
-            "description": "Validation error"
+            "description": "Validation error (VALIDATION_ERROR), or the assignee does not exist (INVALID_ASSIGNEE)"
           },
           "429": {
             "content": {
@@ -897,7 +897,7 @@
                 }
               }
             },
-            "description": "Invalid status transition"
+            "description": "Invalid status transition (INVALID_STATUS_TRANSITION), or the issue was changed since the given version (VERSION_CONFLICT)"
           },
           "422": {
             "content": {
@@ -907,7 +907,7 @@
                 }
               }
             },
-            "description": "Validation error"
+            "description": "Validation error (VALIDATION_ERROR), or the assignee does not exist (INVALID_ASSIGNEE)"
           },
           "429": {
             "content": {

@@ -102,6 +102,12 @@ class ErrorCode(StrEnum):
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
+# Messages for required body fields whose fix isn't obvious from "Field required".
+MISSING_FIELD_MESSAGES: Final = MappingProxyType(
+    {"version": "version is required. GET the issue to read its current version."}
+)
+
+
 # Postgres SQLSTATE codes we translate into domain errors.
 PG_FOREIGN_KEY_VIOLATION: Final = "23503"
 PG_UNIQUE_VIOLATION: Final = "23505"
