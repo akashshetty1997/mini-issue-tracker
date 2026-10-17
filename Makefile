@@ -28,5 +28,5 @@ openapi: ## Regenerate openapi/openapi.json from the backend code
 gen-api: openapi ## Regenerate openapi.json and the frontend's TypeScript API types
 	cd frontend && npm run gen:api
 
-test-web: ## Lint, type-check and build the frontend (needs Node 24 locally)
-	cd frontend && npm ci && npm run lint && npm run typecheck && npm run build
+test-web: ## Lint, type-check, unit-test and build the frontend (needs Node 24 locally)
+	cd frontend && npm ci && npm run lint && npm run typecheck && npm test && npm run build

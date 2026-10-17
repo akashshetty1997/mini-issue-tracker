@@ -54,7 +54,7 @@ jobs:
           git diff --exit-code -- ../openapi/openapi.json
 
   frontend:
-    name: Frontend (lint, types, API type drift, build)
+    name: Frontend (lint, types, API type drift, tests, build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -75,5 +75,7 @@ jobs:
           git diff --exit-code -- src/lib/api/schema.d.ts
       - name: TypeScript
         run: npm run typecheck
+      - name: Vitest
+        run: npm test
       - name: Build
         run: npm run build
