@@ -22,10 +22,15 @@ from app.core.exceptions import AppError
 
 logger = logging.getLogger(__name__)
 
-_HTTP_ERROR_CODES = {404: ErrorCode.NOT_FOUND, 405: ErrorCode.METHOD_NOT_ALLOWED}
+_HTTP_ERROR_CODES = {
+    404: ErrorCode.NOT_FOUND,
+    405: ErrorCode.METHOD_NOT_ALLOWED,
+    413: ErrorCode.PAYLOAD_TOO_LARGE,
+}
 _HTTP_ERROR_MESSAGES = {
     404: "The requested resource was not found.",
     405: "This method is not allowed for this resource.",
+    413: "The request body is too large.",
 }
 _DB_UNAVAILABLE_ERRORS = (OperationalError, InterfaceError, PoolTimeoutError)
 _PYDANTIC_MESSAGE_PREFIX = "Value error, "

@@ -132,7 +132,7 @@ export interface components {
          * ErrorCode
          * @enum {string}
          */
-        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ISSUE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "INVALID_ASSIGNEE" | "INVALID_STATUS_TRANSITION" | "CONFLICT" | "RATE_LIMITED" | "HTTP_ERROR" | "SERVICE_UNAVAILABLE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ISSUE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "INVALID_ASSIGNEE" | "INVALID_STATUS_TRANSITION" | "CONFLICT" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "HTTP_ERROR" | "SERVICE_UNAVAILABLE" | "INTERNAL_ERROR";
         /**
          * ErrorResponse
          * @description Shape of every error response the API returns.

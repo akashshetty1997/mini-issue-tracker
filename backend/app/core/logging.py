@@ -29,12 +29,18 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, default=str)
 
 
+_HANDLER_NAME = "json-stdout"
+
+
 def configure_logging(level: str) -> None:
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(JsonFormatter())
+    """Idempotent: safe to call once per app instance (e.g. in tests)."""
     root = logging.getLogger()
-    root.handlers = [handler]
     root.setLevel(level.upper())
+    if not any(h.get_name() == _HANDLER_NAME for h in root.handlers):
+        handler = logging.StreamHandler(sys.stdout)
+        handler.set_name(_HANDLER_NAME)
+        handler.setFormatter(JsonFormatter())
+        root.addHandler(handler)
     # Uvicorn's own access log would duplicate ours (added with the access-log middleware).
     logging.getLogger("uvicorn.access").handlers = []
     logging.getLogger("uvicorn.access").propagate = False

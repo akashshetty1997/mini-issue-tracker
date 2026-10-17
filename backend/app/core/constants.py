@@ -70,6 +70,10 @@ ENUM_COLUMN_LENGTH: Final = 20
 # Upper bound of a Postgres INTEGER; larger ids would otherwise surface as database errors.
 MAX_DB_INT: Final = 2_147_483_647
 
+# Largest accepted request body. A maximal issue (10k-char description, even fully
+# JSON-escaped) fits comfortably; anything bigger is rejected before it is parsed.
+MAX_REQUEST_BODY_BYTES: Final = 128 * 1024
+
 # --- Listing ---------------------------------------------------------------------------
 DEFAULT_PAGE_SIZE: Final = 20
 MAX_PAGE_SIZE: Final = 100
@@ -90,6 +94,7 @@ class ErrorCode(StrEnum):
     INVALID_STATUS_TRANSITION = "INVALID_STATUS_TRANSITION"
     CONFLICT = "CONFLICT"
     RATE_LIMITED = "RATE_LIMITED"
+    PAYLOAD_TOO_LARGE = "PAYLOAD_TOO_LARGE"
     HTTP_ERROR = "HTTP_ERROR"
     SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
     INTERNAL_ERROR = "INTERNAL_ERROR"
@@ -102,6 +107,7 @@ ASSIGNEE_FK_CONSTRAINT: Final = "fk_issues_assignee_id_users"
 
 # --- HTTP headers ----------------------------------------------------------------------
 REQUEST_ID_HEADER: Final = "X-Request-ID"
+PROCESS_TIME_HEADER: Final = "X-Process-Time"
 RETRY_AFTER_HEADER: Final = "Retry-After"
 RATE_LIMIT_HEADER_LIMIT: Final = "X-RateLimit-Limit"
 RATE_LIMIT_HEADER_REMAINING: Final = "X-RateLimit-Remaining"
@@ -117,6 +123,16 @@ CORS_EXPOSED_HEADERS: Final = (
     RATE_LIMIT_HEADER_LIMIT,
     RATE_LIMIT_HEADER_REMAINING,
     RATE_LIMIT_HEADER_RESET,
+)
+# Added to every response. No Content-Security-Policy: the API serves JSON, and a strict
+# policy would break the bundled Swagger UI at /docs.
+SECURITY_HEADERS: Final = MappingProxyType(
+    {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Resource-Policy": "same-site",
+    }
 )
 CORS_ALLOWED_METHODS: Final = ("GET", "POST", "PATCH", "DELETE", "OPTIONS")
 CORS_ALLOWED_HEADERS: Final = ("Content-Type", REQUEST_ID_HEADER)

@@ -42,6 +42,7 @@
           "INVALID_STATUS_TRANSITION",
           "CONFLICT",
           "RATE_LIMITED",
+          "PAYLOAD_TOO_LARGE",
           "HTTP_ERROR",
           "SERVICE_UNAVAILABLE",
           "INTERNAL_ERROR"
