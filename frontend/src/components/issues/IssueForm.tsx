@@ -5,17 +5,8 @@ import { useState, type FormEvent } from "react";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { ApiError } from "@/lib/api/client";
 import { PRIORITIES, PRIORITY_LABELS, STATUS_LABELS } from "@/lib/constants";
+import { validateIssueForm, type FieldErrors, type IssueFormValues } from "@/lib/issueForm";
 import type { IssuePriority, IssueStatus, Meta, User } from "@/lib/types";
-
-export interface IssueFormValues {
-  title: string;
-  description: string;
-  status: IssueStatus;
-  priority: IssuePriority;
-  assigneeId: number | null;
-}
-
-type FieldErrors = Partial<Record<keyof IssueFormValues, string>>;
 
 interface IssueFormProps {
   initialValues: IssueFormValues;
@@ -37,18 +28,6 @@ const SERVER_FIELDS: Record<string, keyof IssueFormValues> = {
   priority: "priority",
   assignee_id: "assigneeId",
 };
-
-/** Mirrors the server's rules so most mistakes are caught before a round trip. */
-export function validateIssueForm(values: IssueFormValues, limits: Meta["limits"]): FieldErrors {
-  const errors: FieldErrors = {};
-  const title = values.title.trim();
-  if (title.length < limits.title_min_length) errors.title = "Title is required.";
-  else if (title.length > limits.title_max_length)
-    errors.title = `Title must be at most ${limits.title_max_length} characters.`;
-  if (values.description.length > limits.description_max_length)
-    errors.description = `Description must be at most ${limits.description_max_length} characters.`;
-  return errors;
-}
 
 function serverFieldErrors(error: unknown): FieldErrors {
   if (!(error instanceof ApiError)) return {};

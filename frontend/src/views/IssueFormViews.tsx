@@ -3,14 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { IssueForm, type IssueFormValues } from "@/components/issues/IssueForm";
+import { IssueForm } from "@/components/issues/IssueForm";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { NotFoundPanel } from "@/components/ui/NotFoundPanel";
 import { useCreateIssue, useIssue, useMeta, useUpdateIssue, useUsers } from "@/hooks/queries";
 import { useIssueId } from "@/hooks/useIssueId";
 import { ROUTES, STATUSES } from "@/lib/constants";
 import { isNotFound, isVersionConflict } from "@/lib/errors";
-import type { Issue, IssueUpdate, Meta, User } from "@/lib/types";
+import { changedFields, toFormValues, type IssueFormValues } from "@/lib/issueForm";
+import type { Issue, Meta, User } from "@/lib/types";
 import { DetailSkeleton } from "@/views/IssueDetailView";
 
 const NEW_ISSUE: IssueFormValues = {
@@ -20,29 +21,6 @@ const NEW_ISSUE: IssueFormValues = {
   priority: "medium",
   assigneeId: null,
 };
-
-function toFormValues(issue: Issue): IssueFormValues {
-  return {
-    title: issue.title,
-    description: issue.description,
-    status: issue.status,
-    priority: issue.priority,
-    assigneeId: issue.assignee_id,
-  };
-}
-
-type IssueChanges = Omit<IssueUpdate, "version">;
-
-/** PATCH semantics: send only what changed. */
-export function changedFields(before: IssueFormValues, after: IssueFormValues): IssueChanges {
-  const changes: IssueChanges = {};
-  if (after.title !== before.title) changes.title = after.title;
-  if (after.description !== before.description) changes.description = after.description;
-  if (after.status !== before.status) changes.status = after.status;
-  if (after.priority !== before.priority) changes.priority = after.priority;
-  if (after.assigneeId !== before.assigneeId) changes.assignee_id = after.assigneeId;
-  return changes;
-}
 
 function useFormDependencies() {
   const meta = useMeta();
