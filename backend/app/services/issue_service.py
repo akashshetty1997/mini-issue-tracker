@@ -2,7 +2,7 @@ from app.core.clock import Clock
 from app.core.exceptions import InvalidAssigneeError, IssueNotFoundError
 from app.models import Issue
 from app.repositories.interfaces import IssueRepository, UnitOfWork, UserLookup
-from app.repositories.queries import PageRequest, PageResult
+from app.repositories.queries import IssueFilters, PageRequest, PageResult, SortOrder
 from app.schemas.issue import IssueCreate, IssueUpdate
 from app.services.status_policy import StatusTransitionPolicy
 
@@ -35,8 +35,10 @@ class IssueService:
             raise IssueNotFoundError(issue_id)
         return issue
 
-    def list_issues(self, page: PageRequest) -> PageResult[Issue]:
-        return self._issues.list(page)
+    def list_issues(
+        self, filters: IssueFilters, sort: SortOrder, page: PageRequest
+    ) -> PageResult[Issue]:
+        return self._issues.list(filters, sort, page)
 
     def create_issue(self, data: IssueCreate) -> Issue:
         with self._uow:

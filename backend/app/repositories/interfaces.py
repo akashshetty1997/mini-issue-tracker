@@ -9,7 +9,7 @@ from types import TracebackType
 from typing import Any, Protocol, Self
 
 from app.models import Issue, User
-from app.repositories.queries import PageRequest, PageResult
+from app.repositories.queries import IssueFilters, PageRequest, PageResult, SortOrder
 
 
 class IssueRepository(Protocol):
@@ -17,7 +17,9 @@ class IssueRepository(Protocol):
 
     def get(self, issue_id: int) -> Issue | None: ...
 
-    def list(self, page: PageRequest) -> PageResult[Issue]: ...
+    def list(
+        self, filters: IssueFilters, sort: SortOrder, page: PageRequest
+    ) -> PageResult[Issue]: ...
 
     def update(self, issue_id: int, values: Mapping[str, Any]) -> bool:
         """Apply ``values`` to the issue. Returns False if no row was updated."""

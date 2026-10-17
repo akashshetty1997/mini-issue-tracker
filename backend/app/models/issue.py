@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.constants import (
@@ -40,7 +40,6 @@ class Issue(Base):
         _string_enum(IssueStatus, "status"),
         default=DEFAULT_STATUS,
         server_default=DEFAULT_STATUS.value,
-        index=True,
     )
     priority: Mapped[IssuePriority] = mapped_column(
         _string_enum(IssuePriority, "priority"),
@@ -57,3 +56,23 @@ class Issue(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     assignee: Mapped[User | None] = relationship()
+
+
+# List-query indexes (migration 0002). They match the default sort, created_at DESC with
+# id as tiebreaker, with and without a status filter. The status-led index also serves
+# plain status lookups, so status has no single-column index.
+Index("ix_issues_created_at_id", Issue.created_at.desc(), Issue.id.desc())
+Index("ix_issues_status_created_at_id", Issue.status, Issue.created_at.desc(), Issue.id.desc())
+# Trigram indexes let ILIKE '%term%' searches use an index (for terms of 3+ characters).
+Index(
+    "ix_issues_title_trgm",
+    Issue.title,
+    postgresql_using="gin",
+    postgresql_ops={"title": "gin_trgm_ops"},
+)
+Index(
+    "ix_issues_description_trgm",
+    Issue.description,
+    postgresql_using="gin",
+    postgresql_ops={"description": "gin_trgm_ops"},
+)

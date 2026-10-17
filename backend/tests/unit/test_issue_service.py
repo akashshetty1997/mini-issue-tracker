@@ -6,7 +6,7 @@ from app.core.exceptions import (
     InvalidStatusTransitionError,
     IssueNotFoundError,
 )
-from app.repositories.queries import PageRequest
+from app.repositories.queries import IssueFilters, PageRequest, SortOrder
 from app.schemas.issue import IssueCreate, IssueUpdate
 from app.services.issue_service import IssueService
 from app.services.status_policy import StatusTransitionPolicy
@@ -97,7 +97,9 @@ class TestRead:
         clock.advance(minutes=1)
         second = make_issue(service, title="second")
 
-        page = service.list_issues(PageRequest(limit=10, offset=0))
+        page = service.list_issues(
+            IssueFilters(), SortOrder.parse("-created_at"), PageRequest(limit=10, offset=0)
+        )
 
         assert [i.id for i in page.items] == [second, first]
         assert page.total == 2

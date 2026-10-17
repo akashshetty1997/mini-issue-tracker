@@ -9,8 +9,9 @@ from datetime import UTC, datetime, timedelta
 from types import TracebackType
 from typing import Any, Self
 
+from app.core.constants import PRIORITY_RANK
 from app.models import Issue
-from app.repositories.queries import PageRequest, PageResult
+from app.repositories.queries import IssueFilters, PageRequest, PageResult, SortOrder
 
 
 class FixedClock:
@@ -38,9 +39,25 @@ class InMemoryIssueRepository:
     def get(self, issue_id: int) -> Issue | None:
         return self.rows.get(issue_id)
 
-    def list(self, page: PageRequest) -> PageResult[Issue]:
-        ordered = sorted(self.rows.values(), key=lambda i: (i.created_at, i.id), reverse=True)
+    def list(self, filters: IssueFilters, sort: SortOrder, page: PageRequest) -> PageResult[Issue]:
+        matching = [issue for issue in self.rows.values() if self._matches(issue, filters)]
+
+        def sort_key(issue: Issue) -> tuple[Any, int]:
+            value = getattr(issue, sort.field)
+            return (PRIORITY_RANK[value] if sort.field == "priority" else value, issue.id)
+
+        ordered = sorted(matching, key=sort_key, reverse=sort.descending)
         return PageResult(items=ordered[page.offset : page.offset + page.limit], total=len(ordered))
+
+    @staticmethod
+    def _matches(issue: Issue, filters: IssueFilters) -> bool:
+        term = (filters.search or "").lower()
+        return (
+            (not filters.statuses or issue.status in filters.statuses)
+            and (not filters.priorities or issue.priority in filters.priorities)
+            and (filters.assignee_id is None or issue.assignee_id == filters.assignee_id)
+            and (not term or term in issue.title.lower() or term in issue.description.lower())
+        )
 
     def update(self, issue_id: int, values: Mapping[str, Any]) -> bool:
         issue = self.rows.get(issue_id)

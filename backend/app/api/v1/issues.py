@@ -25,7 +25,7 @@ CONFLICT: dict[int | str, dict[str, Any]] = {
 def list_issues(
     service: IssueServiceDep, params: Annotated[IssueListParams, Query()]
 ) -> Page[IssueRead]:
-    result = service.list_issues(params.page_request())
+    result = service.list_issues(params.filters(), params.sort_order(), params.page_request())
     return Page[IssueRead](
         items=[IssueRead.model_validate(issue) for issue in result.items],
         total=result.total,

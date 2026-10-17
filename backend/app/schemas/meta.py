@@ -9,6 +9,7 @@ class FieldLimits(BaseModel):
     description_max_length: int
     default_page_size: int
     max_page_size: int
+    search_max_length: int
 
 
 class MetaRead(BaseModel):
@@ -18,6 +19,8 @@ class MetaRead(BaseModel):
     priorities: list[IssuePriority]
     status_transitions: dict[IssueStatus, list[IssueStatus]]
     limits: FieldLimits
+    sortable_fields: list[str]
+    default_sort: str
 
 
 class HealthRead(BaseModel):

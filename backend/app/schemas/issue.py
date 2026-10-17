@@ -14,16 +14,19 @@ from pydantic import (
 from app.core.constants import (
     DEFAULT_PAGE_SIZE,
     DEFAULT_PRIORITY,
+    DEFAULT_SORT,
     DEFAULT_STATUS,
     DESCRIPTION_MAX_LENGTH,
     MAX_DB_INT,
     MAX_PAGE_SIZE,
+    SEARCH_MAX_LENGTH,
+    SORTABLE_FIELDS,
     TITLE_MAX_LENGTH,
     TITLE_MIN_LENGTH,
     IssuePriority,
     IssueStatus,
 )
-from app.repositories.queries import PageRequest
+from app.repositories.queries import IssueFilters, PageRequest, SortOrder
 from app.schemas.user import UserSummary
 from app.services.status_policy import DEFAULT_STATUS_POLICY
 
@@ -105,11 +108,44 @@ class IssueRead(BaseModel):
         return DEFAULT_STATUS_POLICY.allowed_from(self.status)
 
 
+SearchTerm = Annotated[str, StringConstraints(strip_whitespace=True, max_length=SEARCH_MAX_LENGTH)]
+
+
 class IssueListParams(BaseModel):
+    """Query parameters for listing issues. Repeat ``status``/``priority`` to match any of
+    several values, e.g. ``?status=open&status=in_progress``."""
+
     model_config = ConfigDict(extra="forbid")
 
+    status: list[IssueStatus] = Field(default_factory=list)
+    priority: list[IssuePriority] = Field(default_factory=list)
+    assignee_id: UserId | None = None
+    q: SearchTerm | None = Field(None, description="Case-insensitive title/description search")
+    sort: str = Field(
+        DEFAULT_SORT,
+        description=f"One of {', '.join(SORTABLE_FIELDS)}; prefix with '-' for descending",
+    )
     limit: int = Field(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
     offset: int = Field(0, ge=0)
+
+    @field_validator("sort")
+    @classmethod
+    def validate_sort(cls, value: str) -> str:
+        if SortOrder.parse(value).field not in SORTABLE_FIELDS:
+            allowed = ", ".join(SORTABLE_FIELDS)
+            raise ValueError(f"Unknown sort field. Use one of: {allowed} (prefix '-' for desc).")
+        return value
+
+    def filters(self) -> IssueFilters:
+        return IssueFilters(
+            statuses=tuple(self.status),
+            priorities=tuple(self.priority),
+            assignee_id=self.assignee_id,
+            search=self.q or None,
+        )
+
+    def sort_order(self) -> SortOrder:
+        return SortOrder.parse(self.sort)
 
     def page_request(self) -> PageRequest:
         return PageRequest(limit=self.limit, offset=self.offset)

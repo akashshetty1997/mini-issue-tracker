@@ -75,6 +75,10 @@
             "title": "Max Page Size",
             "type": "integer"
           },
+          "search_max_length": {
+            "title": "Search Max Length",
+            "type": "integer"
+          },
           "title_max_length": {
             "title": "Title Max Length",
             "type": "integer"
@@ -89,7 +93,8 @@
           "title_max_length",
           "description_max_length",
           "default_page_size",
-          "max_page_size"
+          "max_page_size",
+          "search_max_length"
         ],
         "title": "FieldLimits",
         "type": "object"
@@ -315,6 +320,10 @@
       "MetaRead": {
         "description": "Reference data so clients don't hard-code the server's rules.",
         "properties": {
+          "default_sort": {
+            "title": "Default Sort",
+            "type": "string"
+          },
           "limits": {
             "$ref": "#/components/schemas/FieldLimits"
           },
@@ -323,6 +332,13 @@
               "$ref": "#/components/schemas/IssuePriority"
             },
             "title": "Priorities",
+            "type": "array"
+          },
+          "sortable_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sortable Fields",
             "type": "array"
           },
           "status_transitions": {
@@ -350,7 +366,9 @@
           "statuses",
           "priorities",
           "status_transitions",
-          "limits"
+          "limits",
+          "sortable_fields",
+          "default_sort"
         ],
         "title": "MetaRead",
         "type": "object"
@@ -460,6 +478,79 @@
       "get": {
         "operationId": "list_issues_api_v1_issues_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/IssueStatus"
+              },
+              "title": "Status",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priority",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/IssuePriority"
+              },
+              "title": "Priority",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignee_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "maximum": 2147483647,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignee Id"
+            }
+          },
+          {
+            "description": "Case-insensitive title/description search",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive title/description search",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "One of created_at, updated_at, priority, title; prefix with '-' for descending",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "-created_at",
+              "description": "One of created_at, updated_at, priority, title; prefix with '-' for descending",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
           {
             "in": "query",
             "name": "limit",
