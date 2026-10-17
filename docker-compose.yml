@@ -27,7 +27,7 @@ services:
       target: prod
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-issues}:${POSTGRES_PASSWORD:-issues}@db:5432/${POSTGRES_DB:-issue_tracker}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${WEB_HOST_PORT:-3000}}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     ports:
@@ -35,6 +35,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # The URL the browser (not the container) uses to reach the API.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8000}}
+    ports:
+      - "${WEB_HOST_PORT:-3000}:3000"
+    depends_on:
+      - api
 
   # Test runner: the `dev` image stage (with pytest/ruff/mypy). Only started via `make test`.
   api-test:

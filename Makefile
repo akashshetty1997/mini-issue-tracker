@@ -2,7 +2,7 @@
 COMPOSE := docker compose
 API_TEST := $(COMPOSE) --profile test run --rm --build api-test
 
-.PHONY: help up down logs test lint openapi
+.PHONY: help up down logs test lint openapi gen-api test-web
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
@@ -24,3 +24,9 @@ lint: ## Run ruff and mypy on the backend
 
 openapi: ## Regenerate openapi/openapi.json from the backend code
 	$(API_TEST) python scripts/export_openapi.py
+
+gen-api: openapi ## Regenerate openapi.json and the frontend's TypeScript API types
+	cd frontend && npm run gen:api
+
+test-web: ## Lint, type-check and build the frontend (needs Node 24 locally)
+	cd frontend && npm ci && npm run lint && npm run typecheck && npm run build
