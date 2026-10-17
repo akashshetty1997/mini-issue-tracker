@@ -5,6 +5,7 @@ from app.core.exceptions import (
     InvalidAssigneeError,
     InvalidStatusTransitionError,
     IssueNotFoundError,
+    VersionConflictError,
 )
 from app.repositories.queries import IssueFilters, PageRequest, SortOrder
 from app.schemas.issue import IssueCreate, IssueUpdate
@@ -113,7 +114,7 @@ class TestUpdate:
         created_at = service.get_issue(issue_id).created_at
         clock.advance(minutes=5)
 
-        updated = service.update_issue(issue_id, IssueUpdate(title="Renamed"))
+        updated = service.update_issue(issue_id, IssueUpdate(version=1, title="Renamed"))
 
         assert updated.title == "Renamed"
         assert updated.description == "original"
@@ -124,14 +125,16 @@ class TestUpdate:
     def test_allowed_status_change(self, service: IssueService) -> None:
         issue_id = make_issue(service)
 
-        updated = service.update_issue(issue_id, IssueUpdate(status=IssueStatus.IN_PROGRESS))
+        updated = service.update_issue(
+            issue_id, IssueUpdate(version=1, status=IssueStatus.IN_PROGRESS)
+        )
 
         assert updated.status is IssueStatus.IN_PROGRESS
 
     def test_setting_the_same_status_is_allowed(self, service: IssueService) -> None:
         issue_id = make_issue(service, status="closed")
 
-        updated = service.update_issue(issue_id, IssueUpdate(status=IssueStatus.CLOSED))
+        updated = service.update_issue(issue_id, IssueUpdate(version=1, status=IssueStatus.CLOSED))
 
         assert updated.status is IssueStatus.CLOSED
 
@@ -142,7 +145,7 @@ class TestUpdate:
         commits_before = uow.commits
 
         with pytest.raises(InvalidStatusTransitionError):
-            service.update_issue(issue_id, IssueUpdate(status=IssueStatus.IN_PROGRESS))
+            service.update_issue(issue_id, IssueUpdate(version=1, status=IssueStatus.IN_PROGRESS))
 
         assert service.get_issue(issue_id).status is IssueStatus.CLOSED
         assert uow.commits == commits_before
@@ -150,7 +153,7 @@ class TestUpdate:
     def test_unassign_with_null(self, service: IssueService) -> None:
         issue_id = make_issue(service, assignee_id=KNOWN_USER_ID)
 
-        updated = service.update_issue(issue_id, IssueUpdate(assignee_id=None))
+        updated = service.update_issue(issue_id, IssueUpdate(version=1, assignee_id=None))
 
         assert updated.assignee_id is None
 
@@ -158,11 +161,11 @@ class TestUpdate:
         issue_id = make_issue(service)
 
         with pytest.raises(InvalidAssigneeError):
-            service.update_issue(issue_id, IssueUpdate(assignee_id=UNKNOWN_USER_ID))
+            service.update_issue(issue_id, IssueUpdate(version=1, assignee_id=UNKNOWN_USER_ID))
 
     def test_missing_issue_raises_not_found(self, service: IssueService) -> None:
         with pytest.raises(IssueNotFoundError):
-            service.update_issue(404, IssueUpdate(title="x"))
+            service.update_issue(404, IssueUpdate(version=1, title="x"))
 
     def test_failure_mid_operation_rolls_back_and_never_commits(
         self, uow: FakeUnitOfWork, clock: FixedClock
@@ -179,10 +182,52 @@ class TestUpdate:
         commits_before = uow.commits
 
         with pytest.raises(RuntimeError):
-            service.update_issue(issue_id, IssueUpdate(title="never saved"))
+            service.update_issue(issue_id, IssueUpdate(version=1, title="never saved"))
 
         assert uow.commits == commits_before
         assert uow.rollbacks == 1
+
+
+class TestOptimisticLocking:
+    def test_each_update_increments_the_version(self, service: IssueService) -> None:
+        issue_id = make_issue(service)
+        assert service.get_issue(issue_id).version == 1
+
+        service.update_issue(issue_id, IssueUpdate(version=1, title="one"))
+        updated = service.update_issue(issue_id, IssueUpdate(version=2, title="two"))
+
+        assert updated.version == 3
+
+    def test_stale_version_is_rejected_without_writing(
+        self, service: IssueService, uow: FakeUnitOfWork
+    ) -> None:
+        issue_id = make_issue(service)
+        service.update_issue(issue_id, IssueUpdate(version=1, title="first writer"))
+        commits_before = uow.commits
+
+        with pytest.raises(VersionConflictError) as exc_info:
+            service.update_issue(issue_id, IssueUpdate(version=1, title="second writer"))
+
+        assert exc_info.value.details == {"expected_version": 1, "current_version": 2}
+        assert service.get_issue(issue_id).title == "first writer"
+        assert uow.commits == commits_before
+
+    def test_change_between_read_and_write_is_a_conflict(
+        self, service: IssueService, repo: InMemoryIssueRepository
+    ) -> None:
+        """The version check at read time passes, but another writer gets in before our
+        conditional UPDATE; the repository reports no row updated."""
+        issue_id = make_issue(service)
+        original_update = repo.update
+
+        def concurrent_writer_first(*args: object, **kwargs: object) -> bool:
+            repo.rows[issue_id].version += 1  # someone else committed meanwhile
+            return original_update(*args, **kwargs)  # type: ignore[arg-type]
+
+        repo.update = concurrent_writer_first  # type: ignore[method-assign]
+
+        with pytest.raises(VersionConflictError):
+            service.update_issue(issue_id, IssueUpdate(version=1, title="lost update"))
 
 
 class TestDelete:

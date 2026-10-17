@@ -60,6 +60,16 @@ class ConflictError(AppError):
     default_message = "The request conflicts with the current state of the resource."
 
 
+class VersionConflictError(ConflictError):
+    code = ErrorCode.VERSION_CONFLICT
+
+    def __init__(self, expected_version: int, current_version: int | None = None) -> None:
+        super().__init__(
+            "This issue was changed by someone else since you loaded it. Reload it and try again.",
+            details={"expected_version": expected_version, "current_version": current_version},
+        )
+
+
 class InvalidStatusTransitionError(ConflictError):
     code = ErrorCode.INVALID_STATUS_TRANSITION
 

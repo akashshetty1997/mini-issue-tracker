@@ -66,6 +66,8 @@ class TestUpdateValidation:
             ({"status": "archived"}, "status"),
             ({"priority": "p0"}, "priority"),
             ({"unknown": 1}, "unknown"),
+            ({"title": "ok", "version": 0}, "version"),
+            ({"title": "ok", "version": "latest"}, "version"),
         ],
     )
     def test_invalid_payload_is_rejected(
@@ -77,18 +79,18 @@ class TestUpdateValidation:
     ) -> None:
         created = create_issue()
 
-        response = client.patch(f"{ISSUES_URL}/{created['id']}", json=payload)
+        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"version": 1, **payload})
 
         assert field in error_fields(response)
 
     def test_empty_body_is_rejected(self, client: TestClient, create_issue: CreateIssue) -> None:
         created = create_issue()
 
-        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={})
+        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"version": 1})
 
         assert response.status_code == 422
         assert response.json()["error"]["details"][0]["message"] == (
-            "At least one field must be provided."
+            "At least one field to change must be provided."
         )
 
 
@@ -97,7 +99,7 @@ class TestIdAndQueryValidation:
     def test_invalid_issue_id_is_rejected(self, client: TestClient, bad_id: str) -> None:
         for response in (
             client.get(f"{ISSUES_URL}/{bad_id}"),
-            client.patch(f"{ISSUES_URL}/{bad_id}", json={"title": "x"}),
+            client.patch(f"{ISSUES_URL}/{bad_id}", json={"title": "x", "version": 1}),
             client.delete(f"{ISSUES_URL}/{bad_id}"),
         ):
             assert error_fields(response) == ["issue_id"]

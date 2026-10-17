@@ -132,7 +132,7 @@ export interface components {
          * ErrorCode
          * @enum {string}
          */
-        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ISSUE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "INVALID_ASSIGNEE" | "INVALID_STATUS_TRANSITION" | "CONFLICT" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "HTTP_ERROR" | "SERVICE_UNAVAILABLE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ISSUE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "INVALID_ASSIGNEE" | "INVALID_STATUS_TRANSITION" | "CONFLICT" | "VERSION_CONFLICT" | "RATE_LIMITED" | "PAYLOAD_TOO_LARGE" | "HTTP_ERROR" | "SERVICE_UNAVAILABLE" | "INTERNAL_ERROR";
         /**
          * ErrorResponse
          * @description Shape of every error response the API returns.
@@ -209,6 +209,8 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Version */
+            version: number;
         };
         /**
          * IssueStatus
@@ -222,6 +224,7 @@ export interface components {
          *     - title/status/priority: may be omitted, but not set to null
          *     - description: null is treated as an empty description
          *     - assignee_id: null unassigns the issue
+         *     - version: required; the version the client last read (optimistic locking)
          */
         IssueUpdate: {
             /** Assignee Id */
@@ -232,6 +235,11 @@ export interface components {
             status?: components["schemas"]["IssueStatus"] | null;
             /** Title */
             title?: string | null;
+            /**
+             * Version
+             * @description Version of the issue being edited
+             */
+            version: number;
         };
         /**
          * MetaRead

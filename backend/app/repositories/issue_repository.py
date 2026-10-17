@@ -110,8 +110,14 @@ class SqlAlchemyIssueRepository:
         total = self._session.scalar(count_stmt) or 0
         return PageResult(items=self._session.scalars(items_stmt).all(), total=total)
 
-    def update(self, issue_id: int, values: Mapping[str, Any]) -> bool:
-        stmt = update(Issue).where(Issue.id == issue_id).values(**values)
+    def update(self, issue_id: int, values: Mapping[str, Any], expected_version: int) -> bool:
+        # The version check and the bump happen in the same statement, so two concurrent
+        # writers can't both succeed from the same starting version.
+        stmt = (
+            update(Issue)
+            .where(Issue.id == issue_id, Issue.version == expected_version)
+            .values(**values, version=Issue.version + 1)
+        )
         result = cast(CursorResult[Any], self._session.execute(stmt))
         return result.rowcount > 0
 

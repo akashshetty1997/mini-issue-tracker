@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from types import TracebackType
 from typing import Any, Self
 
-from app.core.constants import PRIORITY_RANK
+from app.core.constants import INITIAL_VERSION, PRIORITY_RANK
 from app.models import Issue
 from app.repositories.queries import IssueFilters, PageRequest, PageResult, SortOrder
 
@@ -32,6 +32,7 @@ class InMemoryIssueRepository:
 
     def add(self, issue: Issue) -> Issue:
         issue.id = self._next_id
+        issue.version = INITIAL_VERSION
         self._next_id += 1
         self.rows[issue.id] = issue
         return issue
@@ -59,12 +60,13 @@ class InMemoryIssueRepository:
             and (not term or term in issue.title.lower() or term in issue.description.lower())
         )
 
-    def update(self, issue_id: int, values: Mapping[str, Any]) -> bool:
+    def update(self, issue_id: int, values: Mapping[str, Any], expected_version: int) -> bool:
         issue = self.rows.get(issue_id)
-        if issue is None:
+        if issue is None or issue.version != expected_version:
             return False
         for field, value in values.items():
             setattr(issue, field, value)
+        issue.version += 1
         return True
 
     def delete(self, issue_id: int) -> bool:
@@ -74,7 +76,7 @@ class InMemoryIssueRepository:
 class FailingUpdateIssueRepository(InMemoryIssueRepository):
     """Simulates the database failing part-way through an update."""
 
-    def update(self, issue_id: int, values: Mapping[str, Any]) -> bool:
+    def update(self, issue_id: int, values: Mapping[str, Any], expected_version: int) -> bool:
         raise RuntimeError("simulated database failure")
 
 

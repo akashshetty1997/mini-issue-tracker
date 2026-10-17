@@ -119,7 +119,9 @@ class TestUpdate:
     ) -> None:
         created = create_issue(description="keep me", priority="low")
 
-        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"title": "Renamed"})
+        response = client.patch(
+            f"{ISSUES_URL}/{created['id']}", json={"title": "Renamed", "version": 1}
+        )
 
         assert response.status_code == 200
         body = response.json()
@@ -132,7 +134,9 @@ class TestUpdate:
     def test_change_status(self, client: TestClient, create_issue: CreateIssue) -> None:
         created = create_issue()
 
-        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"status": "resolved"})
+        response = client.patch(
+            f"{ISSUES_URL}/{created['id']}", json={"status": "resolved", "version": 1}
+        )
 
         assert response.status_code == 200
         assert response.json()["status"] == "resolved"
@@ -143,7 +147,9 @@ class TestUpdate:
     ) -> None:
         created = create_issue(status="closed")
 
-        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"status": "in_progress"})
+        response = client.patch(
+            f"{ISSUES_URL}/{created['id']}", json={"status": "in_progress", "version": 1}
+        )
 
         assert response.status_code == 409
         error = response.json()["error"]
@@ -157,8 +163,8 @@ class TestUpdate:
         created = create_issue()
         url = f"{ISSUES_URL}/{created['id']}"
 
-        assigned = client.patch(url, json={"assignee_id": users[1].id}).json()
-        unassigned = client.patch(url, json={"assignee_id": None}).json()
+        assigned = client.patch(url, json={"assignee_id": users[1].id, "version": 1}).json()
+        unassigned = client.patch(url, json={"assignee_id": None, "version": 2}).json()
 
         assert assigned["assignee"] == {"id": users[1].id, "name": "Alan Turing"}
         assert unassigned["assignee"] is None
@@ -169,7 +175,9 @@ class TestUpdate:
     ) -> None:
         created = create_issue(description="something")
 
-        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"description": None})
+        response = client.patch(
+            f"{ISSUES_URL}/{created['id']}", json={"description": None, "version": 1}
+        )
 
         assert response.status_code == 200
         assert response.json()["description"] == ""
@@ -179,16 +187,62 @@ class TestUpdate:
     ) -> None:
         created = create_issue()
 
-        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"assignee_id": 424242})
+        response = client.patch(
+            f"{ISSUES_URL}/{created['id']}", json={"assignee_id": 424242, "version": 1}
+        )
 
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "INVALID_ASSIGNEE"
 
     def test_unknown_issue_returns_404(self, client: TestClient) -> None:
-        response = client.patch(f"{ISSUES_URL}/999999", json={"title": "x"})
+        response = client.patch(f"{ISSUES_URL}/999999", json={"title": "x", "version": 1})
 
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "ISSUE_NOT_FOUND"
+
+
+class TestOptimisticLocking:
+    def test_version_starts_at_1_and_increments(
+        self, client: TestClient, create_issue: CreateIssue
+    ) -> None:
+        created = create_issue()
+        url = f"{ISSUES_URL}/{created['id']}"
+
+        updated = client.patch(url, json={"title": "v2", "version": 1}).json()
+
+        assert created["version"] == 1
+        assert updated["version"] == 2
+
+    def test_stale_version_returns_409_and_keeps_the_other_write(
+        self, client: TestClient, create_issue: CreateIssue
+    ) -> None:
+        created = create_issue()
+        url = f"{ISSUES_URL}/{created['id']}"
+        client.patch(url, json={"title": "Alice's edit", "version": 1})
+
+        response = client.patch(url, json={"title": "Bob's edit", "version": 1})
+
+        assert response.status_code == 409
+        error = response.json()["error"]
+        assert error["code"] == "VERSION_CONFLICT"
+        assert error["details"] == {"expected_version": 1, "current_version": 2}
+        assert client.get(url).json()["title"] == "Alice's edit"
+
+    def test_version_is_required(self, client: TestClient, create_issue: CreateIssue) -> None:
+        created = create_issue()
+
+        response = client.patch(f"{ISSUES_URL}/{created['id']}", json={"title": "x"})
+
+        assert response.status_code == 422
+        assert response.json()["error"]["details"][0]["field"] == "version"
+
+    def test_delete_does_not_require_a_version(
+        self, client: TestClient, create_issue: CreateIssue
+    ) -> None:
+        created = create_issue()
+        client.patch(f"{ISSUES_URL}/{created['id']}", json={"title": "edited", "version": 1})
+
+        assert client.delete(f"{ISSUES_URL}/{created['id']}").status_code == 204
 
 
 class TestDelete:

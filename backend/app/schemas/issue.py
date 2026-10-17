@@ -17,6 +17,7 @@ from app.core.constants import (
     DEFAULT_SORT,
     DEFAULT_STATUS,
     DESCRIPTION_MAX_LENGTH,
+    INITIAL_VERSION,
     MAX_DB_INT,
     MAX_PAGE_SIZE,
     SEARCH_MAX_LENGTH,
@@ -59,10 +60,12 @@ class IssueUpdate(BaseModel):
     - title/status/priority: may be omitted, but not set to null
     - description: null is treated as an empty description
     - assignee_id: null unassigns the issue
+    - version: required; the version the client last read (optimistic locking)
     """
 
     model_config = ConfigDict(extra="forbid")
 
+    version: int = Field(ge=INITIAL_VERSION, description="Version of the issue being edited")
     title: Title | None = None
     description: Description | None = None
     status: IssueStatus | None = None
@@ -83,8 +86,8 @@ class IssueUpdate(BaseModel):
 
     @model_validator(mode="after")
     def require_at_least_one_field(self) -> "IssueUpdate":
-        if not self.model_fields_set:
-            raise ValueError("At least one field must be provided.")
+        if not self.model_fields_set - {"version"}:
+            raise ValueError("At least one field to change must be provided.")
         return self
 
 
@@ -100,6 +103,7 @@ class IssueRead(BaseModel):
     assignee: UserSummary | None
     created_at: datetime
     updated_at: datetime
+    version: int
 
     @computed_field  # type: ignore[prop-decorator]
     @property

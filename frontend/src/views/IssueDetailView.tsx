@@ -98,7 +98,9 @@ function IssueDetailContent({ issue }: { issue: Issue }) {
               className={SELECT}
               value={issue.status}
               disabled={update.isPending}
-              onChange={(e) => update.mutate({ status: e.target.value as IssueStatus })}
+              onChange={(e) =>
+                update.mutate({ status: e.target.value as IssueStatus, version: issue.version })
+              }
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
@@ -117,7 +119,10 @@ function IssueDetailContent({ issue }: { issue: Issue }) {
               value={issue.assignee_id ?? ""}
               disabled={update.isPending || users.isPending}
               onChange={(e) =>
-                update.mutate({ assignee_id: e.target.value ? Number(e.target.value) : null })
+                update.mutate({
+                  assignee_id: e.target.value ? Number(e.target.value) : null,
+                  version: issue.version,
+                })
               }
             >
               <option value="">Unassigned</option>

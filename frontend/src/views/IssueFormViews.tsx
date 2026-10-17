@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { IssueForm, type IssueFormValues } from "@/components/issues/IssueForm";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -8,8 +9,8 @@ import { NotFoundPanel } from "@/components/ui/NotFoundPanel";
 import { useCreateIssue, useIssue, useMeta, useUpdateIssue, useUsers } from "@/hooks/queries";
 import { useIssueId } from "@/hooks/useIssueId";
 import { ROUTES, STATUSES } from "@/lib/constants";
-import { isNotFound } from "@/lib/errors";
-import type { Issue, IssueUpdate } from "@/lib/types";
+import { isNotFound, isVersionConflict } from "@/lib/errors";
+import type { Issue, IssueUpdate, Meta, User } from "@/lib/types";
 import { DetailSkeleton } from "@/views/IssueDetailView";
 
 const NEW_ISSUE: IssueFormValues = {
@@ -30,9 +31,11 @@ function toFormValues(issue: Issue): IssueFormValues {
   };
 }
 
+type IssueChanges = Omit<IssueUpdate, "version">;
+
 /** PATCH semantics: send only what changed. */
-export function changedFields(before: IssueFormValues, after: IssueFormValues): IssueUpdate {
-  const changes: IssueUpdate = {};
+export function changedFields(before: IssueFormValues, after: IssueFormValues): IssueChanges {
+  const changes: IssueChanges = {};
   if (after.title !== before.title) changes.title = after.title;
   if (after.description !== before.description) changes.description = after.description;
   if (after.status !== before.status) changes.status = after.status;
@@ -93,12 +96,14 @@ export function EditIssueView() {
 }
 
 function EditIssue({ id }: { id: number }) {
-  const router = useRouter();
   const issue = useIssue(id);
-  const update = useUpdateIssue(id);
   const deps = useFormDependencies();
+  // The issue as it was when the form loaded. Edits are diffed against it and saved
+  // with its version, even if a newer copy arrives in the background.
+  const [base, setBase] = useState<Issue | null>(null);
+  if (base === null && issue.data) setBase(issue.data);
 
-  if (issue.isError) {
+  if (issue.isError && base === null) {
     return isNotFound(issue.error) ? (
       <NotFoundPanel message={`Issue #${id} was not found. It may have been deleted.`} />
     ) : (
@@ -106,26 +111,69 @@ function EditIssue({ id }: { id: number }) {
     );
   }
   if (deps.error) return <ErrorBanner error={deps.error} />;
-  if (issue.isPending || deps.pending || !deps.meta.data) return <DetailSkeleton />;
-
-  const initialValues = toFormValues(issue.data);
-  const backToIssue = () => router.push(ROUTES.issue(id));
+  if (base === null || deps.pending || !deps.meta.data) return <DetailSkeleton />;
 
   return (
-    <IssueForm
-      initialValues={initialValues}
-      statusOptions={[issue.data.status, ...issue.data.allowed_transitions]}
+    <EditIssueForm
+      // Remount (fresh form state and mutation) when the user loads a newer version.
+      key={base.version}
+      base={base}
+      latest={issue.data ?? base}
+      onLoadLatest={() => issue.data && setBase(issue.data)}
       users={deps.users.data ?? []}
       limits={deps.meta.data.limits}
-      submitLabel="Save changes"
-      submitting={update.isPending}
-      submitError={update.error}
-      onCancel={backToIssue}
-      onSubmit={(values) => {
-        const changes = changedFields(initialValues, values);
-        if (Object.keys(changes).length === 0) return backToIssue();
-        update.mutate(changes, { onSuccess: backToIssue });
-      }}
     />
+  );
+}
+
+interface EditIssueFormProps {
+  base: Issue;
+  latest: Issue;
+  onLoadLatest: () => void;
+  users: User[];
+  limits: Meta["limits"];
+}
+
+function EditIssueForm({ base, latest, onLoadLatest, users, limits }: EditIssueFormProps) {
+  const router = useRouter();
+  const update = useUpdateIssue(base.id);
+  const conflict = isVersionConflict(update.error);
+  const initialValues = toFormValues(base);
+  const backToIssue = () => router.push(ROUTES.issue(base.id));
+
+  return (
+    <div className="space-y-5">
+      {conflict && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p>Someone else saved changes to this issue after you opened it.</p>
+          <button
+            type="button"
+            onClick={onLoadLatest}
+            disabled={latest.version === base.version}
+            className="rounded-md bg-amber-700 px-3 py-1.5 font-medium text-white hover:bg-amber-800 disabled:opacity-60"
+          >
+            Discard my edits and load the latest version
+          </button>
+        </div>
+      )}
+      <IssueForm
+        initialValues={initialValues}
+        statusOptions={[base.status, ...base.allowed_transitions]}
+        users={users}
+        limits={limits}
+        submitLabel="Save changes"
+        submitting={update.isPending}
+        submitError={conflict ? null : update.error}
+        onCancel={backToIssue}
+        onSubmit={(values) => {
+          const changes = changedFields(initialValues, values);
+          if (Object.keys(changes).length === 0) return backToIssue();
+          update.mutate({ ...changes, version: base.version }, { onSuccess: backToIssue });
+        }}
+      />
+    </div>
   );
 }

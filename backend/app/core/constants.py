@@ -69,6 +69,7 @@ EMAIL_MAX_LENGTH: Final = 255
 ENUM_COLUMN_LENGTH: Final = 20
 # Upper bound of a Postgres INTEGER; larger ids would otherwise surface as database errors.
 MAX_DB_INT: Final = 2_147_483_647
+INITIAL_VERSION: Final = 1
 
 # Largest accepted request body. A maximal issue (10k-char description, even fully
 # JSON-escaped) fits comfortably; anything bigger is rejected before it is parsed.
@@ -93,6 +94,7 @@ class ErrorCode(StrEnum):
     INVALID_ASSIGNEE = "INVALID_ASSIGNEE"
     INVALID_STATUS_TRANSITION = "INVALID_STATUS_TRANSITION"
     CONFLICT = "CONFLICT"
+    VERSION_CONFLICT = "VERSION_CONFLICT"
     RATE_LIMITED = "RATE_LIMITED"
     PAYLOAD_TOO_LARGE = "PAYLOAD_TOO_LARGE"
     HTTP_ERROR = "HTTP_ERROR"

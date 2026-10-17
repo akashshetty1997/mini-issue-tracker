@@ -1,5 +1,5 @@
 from app.core.clock import Clock
-from app.core.exceptions import InvalidAssigneeError, IssueNotFoundError
+from app.core.exceptions import InvalidAssigneeError, IssueNotFoundError, VersionConflictError
 from app.models import Issue
 from app.repositories.interfaces import IssueRepository, UnitOfWork, UserLookup
 from app.repositories.queries import IssueFilters, PageRequest, PageResult, SortOrder
@@ -51,18 +51,23 @@ class IssueService:
         return created
 
     def update_issue(self, issue_id: int, data: IssueUpdate) -> Issue:
-        changes = data.model_dump(exclude_unset=True)
+        changes = data.model_dump(exclude_unset=True, exclude={"version"})
         with self._uow:
             issue = self.get_issue(issue_id)
+            # Fail fast with a clear error; the conditional UPDATE below closes the race.
+            if issue.version != data.version:
+                raise VersionConflictError(data.version, issue.version)
             if "status" in changes:
                 self._status_policy.ensure_can_transition(issue.status, changes["status"])
             if changes.get("assignee_id") is not None:
                 self._ensure_assignee_exists(changes["assignee_id"])
 
             changes["updated_at"] = self._clock.now()
-            if not self._issues.update(issue_id, changes):
-                # Deleted by another request after we read it.
-                raise IssueNotFoundError(issue_id)
+            if not self._issues.update(issue_id, changes, expected_version=data.version):
+                # Another request deleted or changed the issue after we read it.
+                if self._issues.get(issue_id) is None:
+                    raise IssueNotFoundError(issue_id)
+                raise VersionConflictError(data.version)
             updated = self.get_issue(issue_id)
             self._uow.commit()
         return updated

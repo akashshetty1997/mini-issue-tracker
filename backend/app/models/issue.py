@@ -8,6 +8,7 @@ from app.core.constants import (
     DEFAULT_PRIORITY,
     DEFAULT_STATUS,
     ENUM_COLUMN_LENGTH,
+    INITIAL_VERSION,
     TITLE_MAX_LENGTH,
     IssuePriority,
     IssueStatus,
@@ -54,6 +55,12 @@ class Issue(Base):
     # rows written outside the application.
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Optimistic-locking counter: bumped on every update; writers must name the version
+    # they read, so concurrent edits are detected instead of silently overwritten.
+    version: Mapped[int] = mapped_column(
+        default=INITIAL_VERSION, server_default=str(INITIAL_VERSION)
+    )
 
     assignee: Mapped[User | None] = relationship()
 

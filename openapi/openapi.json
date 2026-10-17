@@ -41,6 +41,7 @@
           "INVALID_ASSIGNEE",
           "INVALID_STATUS_TRANSITION",
           "CONFLICT",
+          "VERSION_CONFLICT",
           "RATE_LIMITED",
           "PAYLOAD_TOO_LARGE",
           "HTTP_ERROR",
@@ -226,6 +227,10 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -238,6 +243,7 @@
           "assignee",
           "created_at",
           "updated_at",
+          "version",
           "allowed_transitions"
         ],
         "title": "IssueRead",
@@ -255,7 +261,7 @@
       },
       "IssueUpdate": {
         "additionalProperties": false,
-        "description": "Partial update. Only fields present in the request body are changed.\n\n- title/status/priority: may be omitted, but not set to null\n- description: null is treated as an empty description\n- assignee_id: null unassigns the issue",
+        "description": "Partial update. Only fields present in the request body are changed.\n\n- title/status/priority: may be omitted, but not set to null\n- description: null is treated as an empty description\n- assignee_id: null unassigns the issue\n- version: required; the version the client last read (optimistic locking)",
         "properties": {
           "assignee_id": {
             "anyOf": [
@@ -314,8 +320,17 @@
               }
             ],
             "title": "Title"
+          },
+          "version": {
+            "description": "Version of the issue being edited",
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
           }
         },
+        "required": [
+          "version"
+        ],
         "title": "IssueUpdate",
         "type": "object"
       },

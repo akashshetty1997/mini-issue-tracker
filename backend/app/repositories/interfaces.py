@@ -21,8 +21,9 @@ class IssueRepository(Protocol):
         self, filters: IssueFilters, sort: SortOrder, page: PageRequest
     ) -> PageResult[Issue]: ...
 
-    def update(self, issue_id: int, values: Mapping[str, Any]) -> bool:
-        """Apply ``values`` to the issue. Returns False if no row was updated."""
+    def update(self, issue_id: int, values: Mapping[str, Any], expected_version: int) -> bool:
+        """Apply ``values`` and bump the version, but only if the issue is still at
+        ``expected_version``. Returns False if no row matched (missing or changed)."""
         ...
 
     def delete(self, issue_id: int) -> bool:
