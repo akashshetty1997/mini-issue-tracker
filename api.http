@@ -1,0 +1,99 @@
+### Mini Issue Tracker: example requests
+### Works with the VS Code "REST Client" extension or JetBrains HTTP Client.
+### Change @host if you moved the API port (API_HOST_PORT).
+
+@host = http://localhost:8000
+@api = {{host}}/api/v1
+
+### Liveness and readiness
+GET {{host}}/health
+
+###
+GET {{host}}/ready
+
+### Reference data: statuses, priorities, transitions, field limits
+GET {{api}}/meta
+
+###
+GET {{api}}/users
+
+### Create an issue (201 + Location header)
+POST {{api}}/issues
+Content-Type: application/json
+
+{
+  "title": "Checkout button unresponsive on Safari",
+  "description": "Clicking 'Pay now' does nothing on Safari 18.",
+  "priority": "high",
+  "assignee_id": 1
+}
+
+### List: filters, search, sort and paging
+GET {{api}}/issues?status=open&status=in_progress&q=checkout&sort=-priority&limit=10&offset=0
+
+### Get one issue
+GET {{api}}/issues/1
+
+### Partial update: send the version you last read (optimistic locking)
+PATCH {{api}}/issues/1
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "version": 1
+}
+
+### Same version again -> 409 VERSION_CONFLICT (someone else already changed it)
+PATCH {{api}}/issues/1
+Content-Type: application/json
+
+{
+  "title": "A stale edit",
+  "version": 1
+}
+
+### Unassign
+PATCH {{api}}/issues/1
+Content-Type: application/json
+
+{
+  "assignee_id": null,
+  "version": 2
+}
+
+### Delete (204)
+DELETE {{api}}/issues/1
+
+### --- Error cases -------------------------------------------------------------------
+
+### 422: blank title, unknown priority, unknown field
+POST {{api}}/issues
+Content-Type: application/json
+
+{
+  "title": "   ",
+  "priority": "urgent",
+  "reporter": "me"
+}
+
+### 422: invalid id
+GET {{api}}/issues/abc
+
+### 404: unknown issue
+GET {{api}}/issues/999999
+
+### 422: unknown sort field
+GET {{api}}/issues?sort=colour
+
+### 404 / 405 from the framework still use the error envelope
+GET {{api}}/nope
+
+###
+DELETE {{host}}/health
+
+### Search wildcards are literal: "%" only matches titles containing a percent sign
+GET {{api}}/issues?q=%25
+
+### Your request id is echoed back (and appears in the server logs)
+GET {{api}}/issues/999999
+X-Request-ID: my-trace-123
