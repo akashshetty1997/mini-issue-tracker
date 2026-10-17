@@ -21,6 +21,16 @@ services:
       timeout: 3s
       retries: 20
 
+  redis:
+    image: redis:7-alpine
+    # Only holds rate-limit counters, which are disposable: no persistence needed.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   api:
     build:
       context: ./backend
@@ -30,11 +40,18 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${WEB_HOST_PORT:-3000}}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      REDIS_URL: redis://redis:6379/0
+      READ_RATE_LIMIT: ${READ_RATE_LIMIT:-120/minute}
+      WRITE_RATE_LIMIT: ${WRITE_RATE_LIMIT:-30/minute}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1}
     ports:
       - "${API_HOST_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
+      # Not a hard dependency: the API degrades to in-memory rate limits without Redis.
+      redis:
+        condition: service_started
 
   web:
     build:

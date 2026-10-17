@@ -99,7 +99,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Readiness probe (checks the database) */
+        /**
+         * Readiness probe
+         * @description Only the database decides readiness. The rate-limit store is reported but can't
+         *     make the instance unready: without it the limiter degrades to in-memory counters, and
+         *     taking healthy instances out of rotation over it would cause an outage.
+         */
         get: operations["ready_ready_get"];
         put?: never;
         post?: never;
@@ -127,7 +132,7 @@ export interface components {
          * ErrorCode
          * @enum {string}
          */
-        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ISSUE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "INVALID_ASSIGNEE" | "INVALID_STATUS_TRANSITION" | "CONFLICT" | "HTTP_ERROR" | "SERVICE_UNAVAILABLE" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ISSUE_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "INVALID_ASSIGNEE" | "INVALID_STATUS_TRANSITION" | "CONFLICT" | "RATE_LIMITED" | "HTTP_ERROR" | "SERVICE_UNAVAILABLE" | "INTERNAL_ERROR";
         /**
          * ErrorResponse
          * @description Shape of every error response the API returns.
@@ -329,6 +334,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Unexpected error */
             500: {
                 headers: {
@@ -364,6 +378,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -421,6 +444,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Unexpected error */
             500: {
                 headers: {
@@ -462,6 +494,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -532,6 +573,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Unexpected error */
             500: {
                 headers: {
@@ -570,6 +620,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Unexpected error */
             500: {
                 headers: {
@@ -601,6 +660,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

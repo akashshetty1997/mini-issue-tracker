@@ -7,6 +7,7 @@ from app.schemas.common import ErrorResponse
 router = APIRouter(
     responses={
         422: {"model": ErrorResponse, "description": "Validation error"},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         500: {"model": ErrorResponse, "description": "Unexpected error"},
     }
 )

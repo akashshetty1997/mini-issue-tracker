@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.api.rate_limit import ReadRateLimit
 from app.core.constants import (
     DEFAULT_PAGE_SIZE,
     DEFAULT_SORT,
@@ -15,7 +16,7 @@ from app.core.constants import (
 from app.schemas.meta import FieldLimits, MetaRead
 from app.services.status_policy import DEFAULT_STATUS_POLICY
 
-router = APIRouter(prefix="/meta", tags=["meta"])
+router = APIRouter(prefix="/meta", tags=["meta"], dependencies=[ReadRateLimit])
 
 
 @router.get("", summary="Statuses, priorities, transitions and field limits")

@@ -9,4 +9,6 @@ python -m app.scripts.seed
 exec uvicorn app.main:create_app --factory \
     --host 0.0.0.0 \
     --port 8000 \
-    --workers "${WEB_CONCURRENCY:-2}"
+    --workers "${WEB_CONCURRENCY:-2}" \
+    --proxy-headers \
+    --forwarded-allow-ips "${TRUSTED_PROXIES:-127.0.0.1}"

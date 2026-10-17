@@ -27,7 +27,10 @@ def test_ready_checks_the_database(client: TestClient) -> None:
     response = client.get("/ready")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ready", "checks": {"database": "ok"}}
+    assert response.json() == {
+        "status": "ready",
+        "checks": {"database": "ok", "rate_limit_storage": "ok"},
+    }
 
 
 def test_only_versioned_routes_are_part_of_the_api(client: TestClient) -> None:

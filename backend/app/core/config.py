@@ -3,8 +3,11 @@
 from functools import lru_cache
 from typing import Annotated, Literal
 
+from limits import parse
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+from app.core.constants import READ_RATE_LIMIT, WRITE_RATE_LIMIT, RateLimitBucket
 
 
 class Settings(BaseSettings):
@@ -20,6 +23,22 @@ class Settings(BaseSettings):
 
     # Comma-separated in the environment, e.g. "http://localhost:3000,https://app.example.com"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+
+    # Rate limiting. Without REDIS_URL, counters are kept in process memory (fine for a
+    # single process; with several workers each one counts separately).
+    rate_limit_enabled: bool = True
+    redis_url: str | None = None
+    read_rate_limit: str = READ_RATE_LIMIT
+    write_rate_limit: str = WRITE_RATE_LIMIT
+
+    @field_validator("read_rate_limit", "write_rate_limit")
+    @classmethod
+    def validate_rate_limit(cls, value: str) -> str:
+        parse(value)  # raises ValueError for strings like "lots/minute"
+        return value
+
+    def rate_limit_for(self, bucket: RateLimitBucket) -> str:
+        return self.read_rate_limit if bucket is RateLimitBucket.READ else self.write_rate_limit
 
     @field_validator("cors_origins", mode="before")
     @classmethod

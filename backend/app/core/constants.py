@@ -89,6 +89,7 @@ class ErrorCode(StrEnum):
     INVALID_ASSIGNEE = "INVALID_ASSIGNEE"
     INVALID_STATUS_TRANSITION = "INVALID_STATUS_TRANSITION"
     CONFLICT = "CONFLICT"
+    RATE_LIMITED = "RATE_LIMITED"
     HTTP_ERROR = "HTTP_ERROR"
     SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
     INTERNAL_ERROR = "INTERNAL_ERROR"
@@ -101,9 +102,38 @@ ASSIGNEE_FK_CONSTRAINT: Final = "fk_issues_assignee_id_users"
 
 # --- HTTP headers ----------------------------------------------------------------------
 REQUEST_ID_HEADER: Final = "X-Request-ID"
+RETRY_AFTER_HEADER: Final = "Retry-After"
+RATE_LIMIT_HEADER_LIMIT: Final = "X-RateLimit-Limit"
+RATE_LIMIT_HEADER_REMAINING: Final = "X-RateLimit-Remaining"
+RATE_LIMIT_HEADER_RESET: Final = "X-RateLimit-Reset"
 # Incoming request ids are only trusted if they match this; anything else is replaced so
 # client-controlled values can't inject content into log lines.
 REQUEST_ID_PATTERN: Final = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
-CORS_EXPOSED_HEADERS: Final = (REQUEST_ID_HEADER, "Location")
+# Response headers the browser app is allowed to read.
+CORS_EXPOSED_HEADERS: Final = (
+    REQUEST_ID_HEADER,
+    "Location",
+    RETRY_AFTER_HEADER,
+    RATE_LIMIT_HEADER_LIMIT,
+    RATE_LIMIT_HEADER_REMAINING,
+    RATE_LIMIT_HEADER_RESET,
+)
 CORS_ALLOWED_METHODS: Final = ("GET", "POST", "PATCH", "DELETE", "OPTIONS")
 CORS_ALLOWED_HEADERS: Final = ("Content-Type", REQUEST_ID_HEADER)
+
+
+# --- Rate limiting ---------------------------------------------------------------------
+class RateLimitBucket(StrEnum):
+    """Requests are counted per client IP in separate buckets for reads and writes."""
+
+    READ = "read"
+    WRITE = "write"
+
+
+# Defaults; each can be overridden per environment (READ_RATE_LIMIT / WRITE_RATE_LIMIT).
+READ_RATE_LIMIT: Final = "120/minute"
+WRITE_RATE_LIMIT: Final = "30/minute"
+# While Redis is down, how often to check whether it is back.
+RATE_LIMIT_RECOVERY_INTERVAL_SECONDS: Final = 30.0
+# Upper bound on how long a Redis call may add to a request before we give up on it.
+RATE_LIMIT_STORAGE_TIMEOUT_SECONDS: Final = 0.25

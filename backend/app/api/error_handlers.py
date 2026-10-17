@@ -47,7 +47,9 @@ def _format_validation_errors(exc: RequestValidationError) -> list[dict[str, Any
 
 
 async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
-    return error_response(exc.status_code, exc.code, exc.message, details=exc.details)
+    return error_response(
+        exc.status_code, exc.code, exc.message, details=exc.details, headers=exc.headers
+    )
 
 
 async def handle_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:

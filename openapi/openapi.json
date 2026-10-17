@@ -41,6 +41,7 @@
           "INVALID_ASSIGNEE",
           "INVALID_STATUS_TRANSITION",
           "CONFLICT",
+          "RATE_LIMITED",
           "HTTP_ERROR",
           "SERVICE_UNAVAILABLE",
           "INTERNAL_ERROR"
@@ -596,6 +597,16 @@
             },
             "description": "Validation error"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -644,6 +655,16 @@
               }
             },
             "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded"
           },
           "500": {
             "content": {
@@ -703,6 +724,16 @@
               }
             },
             "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded"
           },
           "500": {
             "content": {
@@ -767,6 +798,16 @@
               }
             },
             "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded"
           },
           "500": {
             "content": {
@@ -852,6 +893,16 @@
             },
             "description": "Validation error"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -892,6 +943,16 @@
               }
             },
             "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded"
           },
           "500": {
             "content": {
@@ -938,6 +999,16 @@
             },
             "description": "Validation error"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -978,6 +1049,7 @@
     },
     "/ready": {
       "get": {
+        "description": "Only the database decides readiness. The rate-limit store is reported but can't\nmake the instance unready: without it the limiter degrades to in-memory counters, and\ntaking healthy instances out of rotation over it would cause an outage.",
         "operationId": "ready_ready_get",
         "responses": {
           "200": {
@@ -991,7 +1063,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Readiness probe (checks the database)",
+        "summary": "Readiness probe",
         "tags": [
           "health"
         ]

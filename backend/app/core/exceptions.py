@@ -4,7 +4,7 @@ Each error carries its HTTP status and error code, so a single handler can rende
 them. Adding a new error means adding a subclass; no handler changes are needed.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any, ClassVar
 
 from app.core.constants import ErrorCode, IssueStatus
@@ -15,9 +15,16 @@ class AppError(Exception):
     code: ClassVar[ErrorCode] = ErrorCode.INTERNAL_ERROR
     default_message: ClassVar[str] = "An unexpected error occurred."
 
-    def __init__(self, message: str | None = None, *, details: Any = None) -> None:
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        details: Any = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> None:
         self.message = message or self.default_message
         self.details = details
+        self.headers = headers
         super().__init__(self.message)
 
 
@@ -63,4 +70,16 @@ class InvalidStatusTransitionError(ConflictError):
         super().__init__(
             f"Cannot change status from '{current.value}' to '{target.value}'.",
             details={"from": current.value, "to": target.value, "allowed": allowed_values},
+        )
+
+
+class RateLimitExceededError(AppError):
+    status_code = 429
+    code = ErrorCode.RATE_LIMITED
+
+    def __init__(self, retry_after_seconds: int, headers: Mapping[str, str]) -> None:
+        super().__init__(
+            f"Too many requests. Please retry in {retry_after_seconds} seconds.",
+            details={"retry_after_seconds": retry_after_seconds},
+            headers=headers,
         )
