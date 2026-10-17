@@ -2,7 +2,7 @@
 COMPOSE := docker compose
 API_TEST := $(COMPOSE) --profile test run --rm --build api-test
 
-.PHONY: help up down logs test lint
+.PHONY: help up down logs test lint openapi
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
@@ -20,4 +20,7 @@ test: ## Run the backend test suite inside the dev image
 	$(API_TEST) pytest
 
 lint: ## Run ruff and mypy on the backend
-	$(API_TEST) sh -c "ruff check . && ruff format --check . && mypy app"
+	$(API_TEST) sh -c "ruff check . && ruff format --check . && mypy app tests"
+
+openapi: ## Regenerate openapi/openapi.json from the backend code
+	$(API_TEST) python scripts/export_openapi.py
