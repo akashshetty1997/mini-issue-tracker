@@ -31,6 +31,23 @@ A small issue tracker for creating, triaging and tracking software issues. It co
   - request-size limits
   - CORS that also covers error responses
 
+## Requirements coverage
+
+Where each requirement from the brief is implemented and tested:
+
+| Requirement | Implementation | Tests |
+|---|---|---|
+| Create / view list / view one / update / delete issues | `POST`, `GET`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}` in [issues.py](backend/app/api/v1/issues.py); list, detail and form pages in the web app | [test_issues_api.py](backend/tests/integration/test_issues_api.py), [test_issue_service.py](backend/tests/unit/test_issue_service.py) |
+| Change status | `PATCH` with `status`, checked by [status_policy.py](backend/app/services/status_policy.py); inline select on the detail page | `TestUpdate`, [test_status_policy.py](backend/tests/unit/test_status_policy.py) |
+| Filter by status, search | `status`, `priority`, `assignee_id` and `q` query params in [issue_repository.py](backend/app/repositories/issue_repository.py); filter chips and search box in the UI | [test_issue_filters.py](backend/tests/integration/test_issue_filters.py) |
+| Assign to a user | `assignee_id` on create/update, validated against users | `test_assign_and_unassign`, `test_unknown_assignee_is_rejected` |
+| Issue fields; statuses; priorities | [models/issue.py](backend/app/models/issue.py), enums in [constants.py](backend/app/core/constants.py), [migrations](backend/alembic/versions) | migrations run by the integration suite |
+| Validation: empty title, invalid status/priority, missing fields, invalid assignee, invalid id | Pydantic schemas in [schemas/issue.py](backend/app/schemas/issue.py), service checks, DB constraints | [test_issue_validation.py](backend/tests/integration/test_issue_validation.py) |
+| Error handling with no internals leaked | [error_handlers.py](backend/app/api/error_handlers.py), [unhandled_errors.py](backend/app/middleware/unhandled_errors.py) | [test_errors_and_middleware.py](backend/tests/api/test_errors_and_middleware.py) |
+| Persistence across restarts | PostgreSQL in the `pgdata` Docker volume | verified with `make down && make up` |
+| REST API design | [API](#api) section below; [openapi.json](openapi/openapi.json) | HTTP-level tests in `tests/integration` and `tests/api` |
+| ENGINEERING.md | [ENGINEERING.md](ENGINEERING.md) answers the five questions | n/a |
+
 ## Tech stack
 
 | Layer | Choice |
@@ -47,7 +64,8 @@ A small issue tracker for creating, triaging and tracking software issues. It co
 Prerequisites: Docker with Compose v2 and `make`. Without `make`, run the equivalent `docker compose` commands in the [Makefile](Makefile).
 
 ```bash
-git clone <repo-url> && cd MPcircle
+git clone https://github.com/akashshetty1997/mini-issue-tracker.git
+cd mini-issue-tracker
 make up            # = docker compose up --build -d   (db, redis, api, web)
 ```
 
