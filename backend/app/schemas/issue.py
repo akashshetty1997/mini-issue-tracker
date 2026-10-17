@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Any
 
 from pydantic import (
@@ -5,20 +6,26 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    computed_field,
     field_validator,
     model_validator,
 )
 
 from app.core.constants import (
+    DEFAULT_PAGE_SIZE,
     DEFAULT_PRIORITY,
     DEFAULT_STATUS,
     DESCRIPTION_MAX_LENGTH,
     MAX_DB_INT,
+    MAX_PAGE_SIZE,
     TITLE_MAX_LENGTH,
     TITLE_MIN_LENGTH,
     IssuePriority,
     IssueStatus,
 )
+from app.repositories.queries import PageRequest
+from app.schemas.user import UserSummary
+from app.services.status_policy import DEFAULT_STATUS_POLICY
 
 # Whitespace is stripped before the length check, so "   " is rejected as empty.
 Title = Annotated[
@@ -76,3 +83,33 @@ class IssueUpdate(BaseModel):
         if not self.model_fields_set:
             raise ValueError("At least one field must be provided.")
         return self
+
+
+class IssueRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    description: str
+    status: IssueStatus
+    priority: IssuePriority
+    assignee_id: int | None
+    assignee: UserSummary | None
+    created_at: datetime
+    updated_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def allowed_transitions(self) -> list[IssueStatus]:
+        """Statuses this issue can move to next, so clients only offer legal changes."""
+        return DEFAULT_STATUS_POLICY.allowed_from(self.status)
+
+
+class IssueListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    limit: int = Field(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
+    offset: int = Field(0, ge=0)
+
+    def page_request(self) -> PageRequest:
+        return PageRequest(limit=self.limit, offset=self.offset)
