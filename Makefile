@@ -2,10 +2,10 @@
 COMPOSE := docker compose
 API_TEST := $(COMPOSE) --profile test run --rm --build api-test
 
-.PHONY: help up down logs test lint openapi gen-api test-web
+.PHONY: help up down logs test lint openapi gen-api test-web test-web-docker
 
 help: ## Show available targets
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
 
 up: ## Build and start the full stack in the background
 	$(COMPOSE) up --build -d
@@ -30,3 +30,7 @@ gen-api: openapi ## Regenerate openapi.json and the frontend's TypeScript API ty
 
 test-web: ## Lint, type-check, unit-test and build the frontend (needs Node 24 locally)
 	cd frontend && npm ci && npm run lint && npm run typecheck && npm test && npm run build
+
+test-web-docker: ## Same checks as test-web, inside Docker (no local Node needed)
+	docker build --target test -t issue-tracker-web-test frontend
+	docker run --rm issue-tracker-web-test
