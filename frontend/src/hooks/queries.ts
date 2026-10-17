@@ -63,10 +63,14 @@ export function useCreateIssue() {
 }
 
 export function useUpdateIssue(id: number) {
+  const queryClient = useQueryClient();
   const cacheIssue = useCacheIssue();
   return useMutation({
     mutationFn: (data: IssueUpdate) => issuesApi.update(id, data),
     onSuccess: cacheIssue,
+    // A rejected update (e.g. 409 because another user changed the issue) usually means
+    // our copy is stale; refetch so the page shows the real state and legal options.
+    onError: () => queryClient.invalidateQueries({ queryKey: queryKeys.issue(id) }),
   });
 }
 
